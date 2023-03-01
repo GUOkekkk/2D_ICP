@@ -14,21 +14,21 @@ def point_based_matching(point_pairs: np.ndarray):
         rot_angle, translation_x, translation_y, the best transformation under this situation
     """
 
-    n = len(point_pairs)
-    if n == 0:
+    _n = len(point_pairs)
+    if _n == 0:
         return None, None, None
 
-    x_mean, y_mean, xp_mean, yp_mean = np.mean(point_pairs, axis=0)
+    _x_mean, _y_mean, _xp_mean, _yp_mean = np.mean(point_pairs, axis=0)
 
-    s_x, s_y, s_xp, s_yp = np.hsplit(point_pairs - np.mean(point_pairs, axis=0), 4)
-    s_x_xp = np.sum(s_x * s_xp)
-    s_y_yp = np.sum(s_y * s_yp)
-    s_x_yp = np.sum(s_x * s_yp)
-    s_y_xp = np.sum(s_y * s_xp)
+    _s_x, _s_y, _s_xp, _s_yp = np.hsplit(point_pairs - np.mean(point_pairs, axis=0), 4)
+    _s_x_xp = np.sum(_s_x * _s_xp)
+    _s_y_yp = np.sum(_s_y * _s_yp)
+    _s_x_yp = np.sum(_s_x * _s_yp)
+    _s_y_xp = np.sum(_s_y * _s_xp)
 
-    rot_angle = math.atan2(s_x_yp - s_y_xp, s_x_xp + s_y_yp)
-    translation_x = xp_mean - (x_mean * math.cos(rot_angle) - y_mean * math.sin(rot_angle))
-    translation_y = yp_mean - (x_mean * math.sin(rot_angle) + y_mean * math.cos(rot_angle))
+    rot_angle = math.atan2(_s_x_yp - _s_y_xp, _s_x_xp + _s_y_yp)
+    translation_x = _xp_mean - (_x_mean * math.cos(rot_angle) - _y_mean * math.sin(rot_angle))
+    translation_y = _yp_mean - (_x_mean * math.sin(rot_angle) + _y_mean * math.cos(rot_angle))
 
     return rot_angle, translation_x, translation_y
 
@@ -115,8 +115,23 @@ def icp(
         # update 'points' for the next iteration
         points = aligned_points
 
-        # update transformation history
-        transformation_history.append(np.asarray([closest_translation_x, closest_translation_y, closest_rot_angle]))
+        if len(transformation_history) == 0:
+            # update transformation history
+            transformation_history.append(
+                np.asarray([closest_translation_x, closest_translation_y, closest_rot_angle])
+            )
+        else:
+            _closest_rot_angle = transformation_history[-1][-1] + closest_rot_angle
+            _c, _s = math.cos(transformation_history[-1][-1]), math.sin(transformation_history[-1][-1])
+            _closest_translation_x = (
+                closest_translation_x * _c + closest_translation_y * -_s + transformation_history[-1][0]
+            )
+            _closest_translation_y = (
+                closest_translation_x * _s + closest_translation_y * _c + transformation_history[-1][1]
+            )
+            transformation_history.append(
+                np.asarray([_closest_translation_x, _closest_translation_y, _closest_rot_angle])
+            )
 
         # check convergence
         if (
